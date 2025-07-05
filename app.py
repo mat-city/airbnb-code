@@ -9,7 +9,7 @@ import joblib
 with open("best_airbnb_model_more_featuresV4.pkl", "rb") as f:
     model = joblib.load(f)
 
-def filter_attributes(attributes: dict):
+def filter_attributes(attributes: dict): 
     #filter out values/attributes which are not used by the model to calculate the price
     model_keys = ["n_bathrooms", "n_guest", "n_bedrooms", "n_beds", "is_near_all_sights", "room_density", "location_rating",
                   "amenity_luxury_items", "amenity_tv", "amenity_coffee", "rating", "distance_city_center", "distance_to_acropolis", "distance_to_stadium"]
