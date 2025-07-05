@@ -4,8 +4,7 @@ RUN groupadd --gid 1000 appuser \
     && useradd --uid 1000 --gid 1000 -ms /bin/bash appuser
 
 RUN pip3 install --no-cache-dir --upgrade \
-    pip \
-    virtualenv
+    pip
 
 RUN apt-get update && apt-get install -y \
     build-essential \
@@ -15,9 +14,7 @@ WORKDIR /home/appuser/app
 
 COPY . /home/appuser/app
 
-ENV VIRTUAL_ENV=/home/appuser/venv
-RUN virtualenv ${VIRTUAL_ENV}
-RUN . ${VIRTUAL_ENV}/bin/activate && pip install -r requirements.txt
+RUN pip install -r requirements.txt
 
 RUN chmod +x /home/appuser/app/run.sh
 
