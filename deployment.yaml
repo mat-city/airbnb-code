@@ -14,6 +14,6 @@ spec:
     spec:
       containers:
       - name: streamlit
-        image: docker.io/s231866/streamlit-app:v1.0.5
+        image: docker.io/s231866/streamlit-app:v1.0.7
         ports:
         - containerPort: 8501
