@@ -6,8 +6,7 @@ metadata:
     kubernetes.io/ingress.class: traefik
 spec:
   rules:
-  - host: 141.72.12.82
-    http:
+  - http:
       paths:
       - path: /
         pathType: Prefix
@@ -16,3 +15,4 @@ spec:
             name: streamlit-service
             port:
               number: 8501
+
