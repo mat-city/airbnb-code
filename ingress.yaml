@@ -3,10 +3,10 @@ kind: Ingress
 metadata:
   name: streamlit-ingress
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    kubernetes.io/ingress.class: traefik
 spec:
   rules:
-  - host: streamlit.local
+  - host: http://141.72.12.82:30001
     http:
       paths:
       - path: /
@@ -15,4 +15,4 @@ spec:
           service:
             name: streamlit-service
             port:
-              number: 80
+              number: 8501
