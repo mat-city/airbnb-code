@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: streamlit-app
+  name: streamlit-deployment
 spec:
   replicas: 3
   selector:
@@ -13,7 +13,7 @@ spec:
         app: streamlit
     spec:
       containers:
-      - name: streamlit
-        image: docker.io/s231866/streamlit-app:{{ app_version }}
-        ports:
-        - containerPort: 8501
+        - name: streamlit
+          image: ghcr.io/{{ docker_username }}/{{ docker_image_name }}:{{ app_version }}
+          ports:
+            - containerPort: 8501
