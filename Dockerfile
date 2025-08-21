@@ -7,7 +7,6 @@ RUN groupadd --gid 1000 appuser \
 # System-Pakete
 RUN apt-get update && apt-get install -y \
     build-essential \
-    software-properties-common \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
