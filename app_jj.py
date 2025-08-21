@@ -5,38 +5,10 @@ from geopy.distance import geodesic
 import pandas as pd
 import numpy as np
 import joblib
-import random
-from confluent_kafka import Producer
-import json
-
 # Load the model
-with open("best_airbnb_model_more_featuresV4.pkl", "rb") as f:
+with open("py_scripts/best_airbnb_model_more_featuresV4.pkl", "rb") as f:
     model = joblib.load(f)
-#initialize kafka #TODO make this use the actual cluster
-kafka_config = {
-    'bootstrap.servers': 'localhost:9092',       # Replace with options.kafkaBroker
-    'client.id': 'your-python-client-id',        # Replace with options.kafkaClientId
-}
-producer = Producer(kafka_config)
 
-def delivery_report(err, msg):
-    if err is not None:
-        st.error(f"Delivery failed: {err}")
-    else:
-        st.success(f"Message delivered to {msg.topic()} [{msg.partition()}]")
-
-def send_tracking_message(data, topic="your-tracking-topic"):  # Replace with options.kafkaTopicTracking
-    # Serialize data
-    message_value = json.dumps(data)
-    # Send message
-    producer.produce(
-        topic=topic,
-        value=message_value,
-        callback=delivery_report
-    )
-    # Wait for delivery
-    producer.flush()
-    
 def filter_attributes(attributes: dict):
     #filter out values/attributes which are not used by the model to calculate the price
     model_keys = ["n_bathrooms", "n_guest", "n_bedrooms", "n_beds", "is_near_all_sights", "room_density", "location_rating",
@@ -332,69 +304,44 @@ else:
             else:
                 st.success(f"The recommended price for your new listing is **{round(y_pred,2)}**💲 per Night{f' or **{round(n_days*y_pred,2)}**💲 in total' if n_days else ''}.", icon="🔥")
             return False
+
+    def query_data(values: dict, additional_data=True):
+        """ TODO:
+        output auch durchschnitt von: wohnungen in der region (stadtviertel), und einzelnen features (z.B. Wohnungen mit gleichvielen personen)
+        erweiteter output: durchschnitt von wohnungen mit z.B. mindestens x. personen (x Input)
+        """ 
+        #get data from supabase
+        try:
+            if st.session_state.city=='Athen':
+                print(f"Getting data for {st.session_state.city}")
+                # TODO: read the dataframe here
+                # df_listings = pd.DataFrame()
+            else:
+                return
+        except Exception as e:
+            print(f'Failed to get supabase data because of: {e}')
+            return
+        if "n_guests" in values.keys() and additional_data:
+            #get the average price for the different amount of guests
+            avg_prices = {}
+            for i in range(1,values["n_guests"]+3):
+                avg_prices[i] = sum(df_listings.query(f"accommodates=={i}")['price'])//len(df_listings.query(f"accommodates=={i}"))
+                
+            dataframe = pd.DataFrame(data=avg_prices.values(),index=avg_prices.keys())
+            return dataframe
+        if not additional_data:
+            return
         
     if st.button("Calculate my Price", use_container_width=True):
         missing_fields = calculate_price(st.session_state)
-
-    with st.popover("Submit your Satisfaction Score!", use_container_width=True):
-        preprocessing_dict = st.session_state
-        #make sure ever user input is set:
-        if sum(1 for value in st.session_state.values() if value is None) == 0:
-            #preprocess user input
-            preprocessing_dict.room_density = preprocessing_dict.n_guest / (preprocessing_dict.n_bedrooms + 1)
-            if (
-            (preprocessing_dict.distance_to_acropolis < 2) and
-            (preprocessing_dict.distance_city_center < 2) and
-            (preprocessing_dict.distance_to_stadium < 2)):
-                preprocessing_dict.is_near_all_sights = 1 
-            else:
-                preprocessing_dict.is_near_all_sights = 0
-            #amenities
-            if preprocessing_dict.amenities!=[]:
-                st.session_state.amenity_luxury_items = 1 if "Luxury Items" in st.session_state.amenities else 0
-                st.session_state.amenity_tv = 1 if "TV" in st.session_state.amenities else 0
-                st.session_state.amenity_coffee = 1 if "Coffee" in st.session_state.amenities else 0
-            else:
-                (preprocessing_dict.amenity_luxury_items, preprocessing_dict.amenity_tv, preprocessing_dict.amenity_coffee) = (None, None, None)
-            #total days
+        #provide extra data
+        if not missing_fields:
             try:
-                n_days = (preprocessing_dict.end_date - preprocessing_dict.start_date).days
-            except:
-                n_days = None
-            data = initialize_model_input(preprocessing_dict, [])
-            
-            st.session_state.satis_score = st.slider("How satisfied are you with your price on a scale of 1 to 10", min_value=1.0, max_value=10.0, value=5.0, step=0.1)
-            if st.button("Submit Score"):
-                data["satis_score"] = st.session_state.satis_score
-                print(data)
-                
-                #TODO implement logic to send st.session_state.satis_score and user input to the kafka cluster / minio
-                send_tracking_message([data])
-        else:
-            st.error("Fill out every input field first!")
-            
-            
-
-    
-    if st.button("Batch uploading of satisfaction scores"):
-        data = [
-            {
-            "satis_score": round(random.uniform(4, 10), 1),
-            "n_bathrooms": random.randint(1, 4),
-            "n_guest": random.randint(1, 4),
-            "n_bedrooms": random.randint(1, 4),
-            "n_beds": random.randint(1, 4),
-            "is_near_all_sights": random.randint(0, 1),
-            "amenity_luxury_items": random.randint(0, 1),
-            "room_density": round(random.uniform(0, 1),1),
-            "location_rating": round(random.uniform(1, 5),1),
-            "amenity_tv": random.randint(0, 1),
-            "amenity_coffee": random.randint(0, 1),
-            "rating": round(random.uniform(1, 5),1),
-            "distance_city_center": round(random.uniform(0, 5),2), 
-            "distance_to_acropolis": round(random.uniform(0, 5),2), 
-            "distance_to_stadium": round(random.uniform(0, 5),2),
-            } for _ in range(10)]
-        #TODO implement logic to send st.session_state.satis_score to the kafka cluster / minio
-        
-        send_tracking_message(data)
+                #analyze / query the data to provide the user with additional information
+                chart_data = query_data({"n_guests": st.session_state.n_guest})
+                #show the additional data
+                with st.expander(f"**Additional Data for {st.session_state.city}**", expanded=False):
+                    st.write("*Average price per night for different amounts of guests*")
+                    st.bar_chart(chart_data, x_label="Amount of Guests", y_label="Average Price per night")
+            except Exception as e:
+                print(f"Failed to generate additional data because of error: {e}")
