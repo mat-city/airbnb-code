@@ -6,18 +6,21 @@ import pandas as pd
 import numpy as np
 import joblib
 import random
-from confluent_kafka import Producer
+#from confluent_kafka import Producer
 import json
+
+st.set_option('server.enableStaticServing', True)
+st.set_option('server.enableCORS', False)
 
 # Load the model
 with open("best_airbnb_model_more_featuresV4.pkl", "rb") as f:
     model = joblib.load(f)
 #initialize kafka #TODO make this use the actual cluster
-kafka_config = {
-    'bootstrap.servers': 'localhost:9092',       # Replace with options.kafkaBroker
-    'client.id': 'your-python-client-id',        # Replace with options.kafkaClientId
-}
-producer = Producer(kafka_config)
+# kafka_config = {
+#     'bootstrap.servers': 'localhost:9092',       # Replace with options.kafkaBroker
+#     'client.id': 'your-python-client-id',        # Replace with options.kafkaClientId
+# }
+# producer = Producer(kafka_config)
 
 def delivery_report(err, msg):
     if err is not None:
@@ -25,17 +28,17 @@ def delivery_report(err, msg):
     else:
         st.success(f"Message delivered to {msg.topic()} [{msg.partition()}]")
 
-def send_tracking_message(data, topic="your-tracking-topic"):  # Replace with options.kafkaTopicTracking
-    # Serialize data
-    message_value = json.dumps(data)
-    # Send message
-    producer.produce(
-        topic=topic,
-        value=message_value,
-        callback=delivery_report
-    )
-    # Wait for delivery
-    producer.flush()
+# def send_tracking_message(data, topic="your-tracking-topic"):  # Replace with options.kafkaTopicTracking
+#     # Serialize data
+#     message_value = json.dumps(data)
+#     # Send message
+#     producer.produce(
+#         topic=topic,
+#         value=message_value,
+#         callback=delivery_report
+#     )
+#     # Wait for delivery
+#     producer.flush()
     
 def filter_attributes(attributes: dict):
     #filter out values/attributes which are not used by the model to calculate the price
@@ -397,4 +400,4 @@ else:
             } for _ in range(10)]
         #TODO implement logic to send st.session_state.satis_score to the kafka cluster / minio
         
-        send_tracking_message(data)
+        # send_tracking_message(data)
