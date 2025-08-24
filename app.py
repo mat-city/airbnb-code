@@ -39,7 +39,7 @@ def delivery_report(err, msg):
 #     )
 #     # Wait for delivery
 #     producer.flush()
-    
+#test
 def filter_attributes(attributes: dict):
     #filter out values/attributes which are not used by the model to calculate the price
     model_keys = ["n_bathrooms", "n_guest", "n_bedrooms", "n_beds", "is_near_all_sights", "room_density", "location_rating",
