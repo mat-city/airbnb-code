@@ -8,9 +8,10 @@ import joblib
 import random
 from confluent_kafka import Producer
 import json
+import os
 
-st.set_option('server.enableStaticServing', True)
-st.set_option('server.enableCORS', False)
+# st.set_option('server.enableStaticServing', True)
+# st.set_option('server.enableCORS', False)
 
 # Load the model
 with open("best_airbnb_model_more_featuresV4.pkl", "rb") as f:
