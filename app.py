@@ -6,21 +6,25 @@ import pandas as pd
 import numpy as np
 import joblib
 import random
-#from confluent_kafka import Producer
+from confluent_kafka import Producer
 import json
 
-# st.set_option('server.enableStaticServing', True)
-# st.set_option('server.enableCORS', False)
+st.set_option('server.enableStaticServing', True)
+st.set_option('server.enableCORS', False)
 
 # Load the model
 with open("best_airbnb_model_more_featuresV4.pkl", "rb") as f:
     model = joblib.load(f)
 #initialize kafka #TODO make this use the actual cluster
-# kafka_config = {
-#     'bootstrap.servers': 'localhost:9092',       # Replace with options.kafkaBroker
-#     'client.id': 'your-python-client-id',        # Replace with options.kafkaClientId
-# }
-# producer = Producer(kafka_config)
+KAFKA_BROKER = os.environ.get("KAFKA_BROKER", "localhost:9092")
+KAFKA_TOPIC_TRACKING = os.environ.get("KAFKA_TOPIC_TRACKING", "tracking-topic")
+
+
+kafka_config = {
+    'bootstrap.servers': KAFKA_BROKER,
+    'client.id': 'streamlit-producer',
+}
+producer = Producer(kafka_config)
 
 def delivery_report(err, msg):
     if err is not None:
@@ -28,19 +32,24 @@ def delivery_report(err, msg):
     else:
         st.success(f"Message delivered to {msg.topic()} [{msg.partition()}]")
 
-# def send_tracking_message(data, topic="your-tracking-topic"):  # Replace with options.kafkaTopicTracking
-#     # Serialize data
-#     message_value = json.dumps(data)
-#     # Send message
-#     producer.produce(
-#         topic=topic,
-#         value=message_value,
-#         callback=delivery_report
-#     )
-#     # Wait for delivery
-#     producer.flush()
-#test
-#test2
+def send_tracking_message(data, topic=KAFKA_TOPIC_TRACKING):
+    # if data is not a list, make it one
+    if not isinstance(data, list):
+        data = [data]
+    
+    for record in data:
+        # Serialize data
+        message_value = json.dumps(record)
+        # Send message
+        producer.produce(
+            topic=topic,
+            value=message_value,
+            callback=delivery_report
+        )
+    # Wait for all messages to be delivered
+    producer.flush()
+
+
 def filter_attributes(attributes: dict):
     #filter out values/attributes which are not used by the model to calculate the price
     model_keys = ["n_bathrooms", "n_guest", "n_bedrooms", "n_beds", "is_near_all_sights", "room_density", "location_rating",
@@ -243,7 +252,7 @@ else:
         
         if sum(1 for value in session_state.values() if value is None) > 0:
             print(f"session state: {session_state}")
-            # st.write(f"Prices for the missing attributes will be calculated, given the following attributes: {[key for key in session_state.keys() if session_state[key]!=None and session_state[key]!=[]]}")
+            st.write(f"Prices for the missing attributes will be calculated, given the following attributes: {[key for key in session_state.keys() if session_state[key]!=None and session_state[key]!=[]]}")
             missing_attributes = {key: session_state[key] for key in session_state.keys() if session_state[key]==None or session_state[key]==[]}
             filtered_missing_attributes = filter_attributes(missing_attributes)
             #set default value for missing attributes
@@ -251,7 +260,7 @@ else:
             print(f"missing_attributes: {missing_attributes}")
             print(f"default_attributes: {default_attributes}")
             
-            # st.write(f"The missing attributes being used and their default values are: {default_attributes}")
+            st.write(f"The missing attributes being used and their default values are: {default_attributes}")
             with st.spinner(f"Calculating"):
                 #calculate price prediction for missing values
                 with st.expander(f"**Prices regarding missing values**", expanded=False):
@@ -267,9 +276,9 @@ else:
                                 model_input[key] = i
                                 converted_model_input = [[value for value in model_input.values()]]
                                 price = np.expm1(model.predict(converted_model_input)[0])
-                                # st.write(f"Input: {converted_model_input}")
-                                # st.write(f"Output: {price}")
-                                # st.write("------------------")
+                                st.write(f"Input: {converted_model_input}")
+                                st.write(f"Output: {price}")
+                                st.write("------------------")
                                 data[i] = price
                                 all_prices.append(price)
                             model_input[key] = old_value
@@ -291,9 +300,9 @@ else:
                                 converted_model_input = [[value for value in model_input.values()]]
                                 price = np.expm1(model.predict(converted_model_input)[0])
                                 data[i] = price
-                                # st.write(f"Input: {converted_model_input}")
-                                # st.write(f"Output: {price}")
-                                # st.write("------------------")
+                                st.write(f"Input: {converted_model_input}")
+                                st.write(f"Output: {price}")
+                                st.write("------------------")
                                 all_prices.append(price)
                         
                         elif key in ["distance_city_center", "distance_to_acropolis", "distance_to_stadium"]:
@@ -302,9 +311,9 @@ else:
                                 converted_model_input = [[value for value in model_input.values()]]
                                 price = np.expm1(model.predict(converted_model_input)[0])
                                 data[i] = price
-                                # st.write(f"Input: {converted_model_input}")
-                                # st.write(f"Output: {price}")
-                                # st.write("------------------")
+                                st.write(f"Input: {converted_model_input}")
+                                st.write(f"Output: {price}")
+                                st.write("------------------")
                                 all_prices.append(price)
                         elif key in ["is_near_all_sights", "amenity_luxury_items", "amenity_tv", "amenity_coffee"]:
                             for i in [0,1]:
@@ -312,14 +321,13 @@ else:
                                 converted_model_input = [[value for value in model_input.values()]]
                                 price = np.expm1(model.predict(converted_model_input)[0])
                                 data[i] = price
-                                # st.write(f"Input: {converted_model_input}")
-                                # st.write(f"Output: {price}")
-                                # st.write("------------------")
+                                st.write(f"Input: {converted_model_input}")
+                                st.write(f"Output: {price}")
+                                st.write("------------------")
                                 all_prices.append(price)
                                 
                         dataframe = pd.DataFrame(data=data.values(),index=data.keys())
                         st.bar_chart(dataframe, x_label=key, y_label="Average Price per night")
-                        #st.bar_chart(chart_data, x_label="Amount of Guests", y_label="Average Price per night")
                 if st.session_state.user_role=="Guest": 
                     st.success(f"You can expected a price from **{round(min(all_prices),2)}**💲 to **{round(max(all_prices),2)}**💲 per Night{f' or **{round(n_days*min(all_prices),2)}**💲 to **{round(n_days*max(all_prices),2)}**💲 in total' if n_days else ''}.", icon="🔥")
                 else:
@@ -401,4 +409,4 @@ else:
             } for _ in range(10)]
         #TODO implement logic to send st.session_state.satis_score to the kafka cluster / minio
         
-        # send_tracking_message(data)
+        send_tracking_message(data)
