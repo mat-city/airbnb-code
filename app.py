@@ -108,7 +108,7 @@ def initialize_model_input(session_state: dict, default_attributes: dict):
     return input
 
 # Streamlit setup
-st.page_title = "Price Forecasting Ssssssservice for Airbnb Listings"
+st.page_title = "Price Forecasting Service for Airbnb Listings"
 st.set_page_config(layout="wide", page_title=st.page_title)
 st.markdown(
     """
